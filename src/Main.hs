@@ -67,34 +67,30 @@ parseLexemeW (c:cs) = case parseLexemeW cs of
     ls                    -> Right (Symbol [c]  ) : ls
 
 
--- Nothing stands for a variable
-type LexemeV = Maybe Lexeme
+data Var = Var String
+  deriving (Show, Eq)
+
+type LexemeV = Either Var Lexeme
 
 -- |
 -- >>> mapM_ print $ parseLexemeV "for (let VAR of LIST) {...}"
 -- Right (Alphanum "for")
--- Left (Blank " ")
 -- Right (Open "(")
 -- Right (Alphanum "let")
--- Left (Blank " ")
--- Nothing
--- Left (Blank " ")
+-- Left (Var "VAR")
 -- Right (Alphanum "of")
--- Left (Blank " ")
--- Nothing
+-- Left (Var "LIST")
 -- Right (Close ")")
--- Left (Blank " ")
 -- Right (Open "{")
--- Nothing
+-- Left (Var "...")
 -- Right (Close "}")
 parseLexemeV :: String -> [LexemeV]
 parseLexemeV = fmap isVar . rights . parseLexemeW
   where
     isVar :: Lexeme -> LexemeV
-    isVar (Alphanum "...") = Nothing
-    isVar (Alphanum s) | all isUpper s = Nothing
-    isVar x = Just x
-
+    isVar (Symbol "...") = Left (Var "...")
+    isVar (Alphanum s) | all isUpper s = Left (Var s)
+    isVar x = Right x
 
 main :: IO ()
 main = doctest ["src/Main.hs"]
