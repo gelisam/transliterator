@@ -4,60 +4,65 @@ import Data.Char
 import Test.DocTest
 
 
+data Whitespace
+  = Newline
+  | Blank   String
+  | Comment String
+  deriving (Show, Eq)
+
 data Lexeme
   = Alphanum   String
   | Symbol     String
-  | Whitespace String
-  | Newline
-  | Comment    String
   | Open       String
   | Close      String
   deriving (Show, Eq)
 
+type LexemeW = Either Whitespace Lexeme
+
 -- |
 -- >>> mapM_ print $ lexer "for (let i of [1,2,3]) {...}"
--- Alphanum "for"
--- Whitespace " "
--- Open "("
--- Alphanum "let"
--- Whitespace " "
--- Alphanum "i"
--- Whitespace " "
--- Alphanum "of"
--- Whitespace " "
--- Open "["
--- Alphanum "1"
--- Symbol ","
--- Alphanum "2"
--- Symbol ","
--- Alphanum "3"
--- Close "]"
--- Close ")"
--- Whitespace " "
--- Open "{"
--- Symbol "..."
--- Close "}"
-lexer :: String -> [Lexeme]
+-- Right (Alphanum "for")
+-- Left (Blank " ")
+-- Right (Open "(")
+-- Right (Alphanum "let")
+-- Left (Blank " ")
+-- Right (Alphanum "i")
+-- Left (Blank " ")
+-- Right (Alphanum "of")
+-- Left (Blank " ")
+-- Right (Open "[")
+-- Right (Alphanum "1")
+-- Right (Symbol ",")
+-- Right (Alphanum "2")
+-- Right (Symbol ",")
+-- Right (Alphanum "3")
+-- Right (Close "]")
+-- Right (Close ")")
+-- Left (Blank " ")
+-- Right (Open "{")
+-- Right (Symbol "...")
+-- Right (Close "}")
+lexer :: String -> [LexemeW]
 lexer [] = []
 lexer (c:cs) | isAlphaNum c = case lexer cs of
-    Alphanum s : ls -> Alphanum (c:s) : ls
-    ls              -> Alphanum [c]   : ls
-lexer ('\n':cs) = Newline : lexer cs
+    Right (Alphanum s) : ls -> Right (Alphanum (c:s)) : ls
+    ls                      -> Right (Alphanum [c]  ) : ls
+lexer ('\n':cs) = Left Newline : lexer cs
 lexer (c:cs) | isSpace c = case lexer cs of
-    Whitespace s : ls -> Whitespace (c:s) : ls
-    ls                -> Whitespace [c]   : ls
-lexer ('/':'/':cs) = Comment comment : lexer cs'
+    Left (Blank s) : ls -> Left (Blank (c:s)) : ls
+    ls                  -> Left (Blank [c]  ) : ls
+lexer ('/':'/':cs) = Left (Comment comment) : lexer cs'
   where
     (comment, cs') = break (/= '\n') cs
-lexer ('{':cs) = Open "{" : lexer cs
-lexer ('[':cs) = Open "[" : lexer cs
-lexer ('(':cs) = Open "(" : lexer cs
-lexer (')':cs) = Close ")" : lexer cs
-lexer (']':cs) = Close "]" : lexer cs
-lexer ('}':cs) = Close "}" : lexer cs
+lexer ('{':cs) = Right (Open  "{") : lexer cs
+lexer ('[':cs) = Right (Open  "[") : lexer cs
+lexer ('(':cs) = Right (Open  "(") : lexer cs
+lexer (')':cs) = Right (Close ")") : lexer cs
+lexer (']':cs) = Right (Close "]") : lexer cs
+lexer ('}':cs) = Right (Close "}") : lexer cs
 lexer (c:cs) = case lexer cs of
-    Symbol s : ls -> Symbol (c:s) : ls
-    ls            -> Symbol [c]   : ls
+    Right (Symbol s) : ls -> Right (Symbol (c:s)) : ls
+    ls                    -> Right (Symbol [c]  ) : ls
 
 
 main :: IO ()
