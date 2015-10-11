@@ -4,17 +4,18 @@ import Data.Char
 import Test.DocTest
 
 
-data Whitespace
-  = Newline
-  | Blank   String
-  | Comment String
-  deriving (Show, Eq)
-
 data Lexeme
   = Alphanum   String
   | Symbol     String
   | Open       String
   | Close      String
+  deriving (Show, Eq)
+
+
+data Whitespace
+  = Newline
+  | Blank   String
+  | Comment String
   deriving (Show, Eq)
 
 type LexemeW = Either Whitespace Lexeme
