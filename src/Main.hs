@@ -68,6 +68,13 @@ parseLexemeW (c:cs) = case parseLexemeW cs of
 
 
 type Var = String
+
+isVar :: Lexeme -> Maybe Var
+isVar (Symbol "...") = Just "..."
+isVar (Alphanum s) | all isUpper s = Just s
+isVar _ = Nothing
+
+
 type LexemeV = Either Var Lexeme
 
 -- |
@@ -83,12 +90,39 @@ type LexemeV = Either Var Lexeme
 -- Left "..."
 -- Right (Close "}")
 parseLexemeV :: String -> [LexemeV]
-parseLexemeV = fmap isVar . rights . parseLexemeW
+parseLexemeV = fmap go . rights . parseLexemeW
   where
-    isVar :: Lexeme -> LexemeV
-    isVar (Symbol "...") = Left "..."
-    isVar (Alphanum s) | all isUpper s = Left s
-    isVar x = Right x
+    go :: Lexeme -> LexemeV
+    go x = case isVar x of
+        Just v  -> Left v
+        Nothing -> Right x
+
+
+type LexemeVW = Either Var LexemeW
+
+-- |
+-- >>> mapM_ print $ parseLexemeVW "LIST.foreach { VAR => ... }"
+-- Left "LIST"
+-- Right (Right (Symbol "."))
+-- Right (Right (Alphanum "foreach"))
+-- Right (Left (Blank " "))
+-- Right (Right (Open "{"))
+-- Right (Left (Blank " "))
+-- Left "VAR"
+-- Right (Left (Blank " "))
+-- Right (Right (Symbol "=>"))
+-- Right (Left (Blank " "))
+-- Left "..."
+-- Right (Left (Blank " "))
+-- Right (Right (Close "}"))
+parseLexemeVW :: String -> [LexemeVW]
+parseLexemeVW = fmap go . parseLexemeW
+  where
+    go :: LexemeW -> LexemeVW
+    go (Left  w) = Right (Left w)
+    go (Right x) = case isVar x of
+        Just v  -> Left v
+        Nothing -> Right (Right x)
 
 
 main :: IO ()
