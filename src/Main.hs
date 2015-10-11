@@ -1,6 +1,7 @@
 module Main where
 
 import Data.Char
+import Data.Either
 import Test.DocTest
 
 
@@ -64,6 +65,35 @@ parseLexemeW ('}':cs) = Right (Close "}") : parseLexemeW cs
 parseLexemeW (c:cs) = case parseLexemeW cs of
     Right (Symbol s) : ls -> Right (Symbol (c:s)) : ls
     ls                    -> Right (Symbol [c]  ) : ls
+
+
+-- Nothing stands for a variable
+type LexemeV = Maybe Lexeme
+
+-- |
+-- >>> mapM_ print $ parseLexemeV "for (let VAR of LIST) {...}"
+-- Right (Alphanum "for")
+-- Left (Blank " ")
+-- Right (Open "(")
+-- Right (Alphanum "let")
+-- Left (Blank " ")
+-- Nothing
+-- Left (Blank " ")
+-- Right (Alphanum "of")
+-- Left (Blank " ")
+-- Nothing
+-- Right (Close ")")
+-- Left (Blank " ")
+-- Right (Open "{")
+-- Nothing
+-- Right (Close "}")
+parseLexemeV :: String -> [LexemeV]
+parseLexemeV = fmap isVar . rights . parseLexemeW
+  where
+    isVar :: Lexeme -> LexemeV
+    isVar (Alphanum "...") = Nothing
+    isVar (Alphanum s) | all isUpper s = Nothing
+    isVar x = Just x
 
 
 main :: IO ()
