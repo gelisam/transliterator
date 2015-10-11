@@ -67,9 +67,7 @@ parseLexemeW (c:cs) = case parseLexemeW cs of
     ls                    -> Right (Symbol [c]  ) : ls
 
 
-data Var = Var String
-  deriving (Show, Eq)
-
+type Var = String
 type LexemeV = Either Var Lexeme
 
 -- |
@@ -77,20 +75,21 @@ type LexemeV = Either Var Lexeme
 -- Right (Alphanum "for")
 -- Right (Open "(")
 -- Right (Alphanum "let")
--- Left (Var "VAR")
+-- Left "VAR"
 -- Right (Alphanum "of")
--- Left (Var "LIST")
+-- Left "LIST"
 -- Right (Close ")")
 -- Right (Open "{")
--- Left (Var "...")
+-- Left "..."
 -- Right (Close "}")
 parseLexemeV :: String -> [LexemeV]
 parseLexemeV = fmap isVar . rights . parseLexemeW
   where
     isVar :: Lexeme -> LexemeV
-    isVar (Symbol "...") = Left (Var "...")
-    isVar (Alphanum s) | all isUpper s = Left (Var s)
+    isVar (Symbol "...") = Left "..."
+    isVar (Alphanum s) | all isUpper s = Left s
     isVar x = Right x
+
 
 main :: IO ()
 main = doctest ["src/Main.hs"]
