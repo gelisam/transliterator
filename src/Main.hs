@@ -15,17 +15,28 @@ data Lexeme
   deriving (Show, Eq)
 
 -- |
--- >>> mapM_ print $ lexer "console.log(2 + 4)"
--- Alphanum "console"
--- Symbol "."
--- Alphanum "log"
+-- >>> mapM_ print $ lexer "for (let i of [1,2,3]) {...}"
+-- Alphanum "for"
+-- Whitespace " "
 -- Open "("
+-- Alphanum "let"
+-- Whitespace " "
+-- Alphanum "i"
+-- Whitespace " "
+-- Alphanum "of"
+-- Whitespace " "
+-- Open "["
+-- Alphanum "1"
+-- Symbol ","
 -- Alphanum "2"
--- Whitespace " "
--- Symbol "+"
--- Whitespace " "
--- Alphanum "4"
+-- Symbol ","
+-- Alphanum "3"
+-- Close "]"
 -- Close ")"
+-- Whitespace " "
+-- Open "{"
+-- Symbol "..."
+-- Close "}"
 lexer :: String -> [Lexeme]
 lexer [] = []
 lexer (c:cs) | isAlphaNum c = case lexer cs of
