@@ -18,6 +18,16 @@ import Test.DocTest
 -- >>> let scalaForeachPatternVM = parseLexemeVW scalaForeachPattern
 
 
+class Unparse a where
+    unparse :: a -> String
+
+instance Unparse a => Unparse [a] where
+    unparse = concatMap unparse
+
+instance (Unparse a, Unparse b) => Unparse (Either a b) where
+    unparse = either unparse unparse
+
+
 data Lexeme
   = Alphanum   String
   | Symbol     String
@@ -25,12 +35,23 @@ data Lexeme
   | Close      String
   deriving (Show, Eq)
 
+instance Unparse Lexeme where
+    unparse (Alphanum s) = s
+    unparse (Symbol   s) = s
+    unparse (Open     s) = s
+    unparse (Close    s) = s
+
 
 data Whitespace
   = Newline
   | Blank   String
   | Comment String
   deriving (Show, Eq)
+
+instance Unparse Whitespace where
+    unparse Newline     = "\n"
+    unparse (Blank   s) = s
+    unparse (Comment s) = "//" ++ s
 
 type LexemeW = Either Whitespace Lexeme
 
