@@ -4,6 +4,23 @@ import Data.Char
 import Data.Either
 import Test.DocTest
 
+-- $setup
+-- >>> let jsForeachSource = "for (let i of [1,2,3]) {...}"
+-- >>> let jsForeachPattern = "for (let VAR of LIST) {...}"
+-- >>> let scalaForeachPattern = "LIST.foreach { VAR => ... }"
+-- 
+-- >>> let jsForeachSourceW = parseLexemeW jsForeachSource
+-- >>> let jsForeachSourceV = parseLexemeV jsForeachSource
+-- >>> let jsForeachSourceVM = parseLexemeVW jsForeachSource
+-- 
+-- >>> let jsForeachPatternW = parseLexemeW jsForeachPattern
+-- >>> let jsForeachPatternV = parseLexemeV jsForeachPattern
+-- >>> let jsForeachPatternVM = parseLexemeVW jsForeachPattern
+-- 
+-- >>> let scalaForeachPatternW = parseLexemeW scalaForeachPattern
+-- >>> let scalaForeachPatternV = parseLexemeV scalaForeachPattern
+-- >>> let scalaForeachPatternVM = parseLexemeVW scalaForeachPattern
+
 
 data Lexeme
   = Alphanum   String
@@ -22,7 +39,7 @@ data Whitespace
 type LexemeW = Either Whitespace Lexeme
 
 -- |
--- >>> mapM_ print $ parseLexemeW "for (let i of [1,2,3]) {...}"
+-- >>> mapM_ print jsForeachSourceW
 -- Right (Alphanum "for")
 -- Left (Blank " ")
 -- Right (Open "(")
@@ -78,7 +95,7 @@ isVar _ = Nothing
 type LexemeV = Either Var Lexeme
 
 -- |
--- >>> mapM_ print $ parseLexemeV "for (let VAR of LIST) {...}"
+-- >>> mapM_ print jsForeachPatternV
 -- Right (Alphanum "for")
 -- Right (Open "(")
 -- Right (Alphanum "let")
@@ -101,7 +118,7 @@ parseLexemeV = fmap go . rights . parseLexemeW
 type LexemeVW = Either Var LexemeW
 
 -- |
--- >>> mapM_ print $ parseLexemeVW "LIST.foreach { VAR => ... }"
+-- >>> mapM_ print scalaForeachPatternVM
 -- Left "LIST"
 -- Right (Right (Symbol "."))
 -- Right (Right (Alphanum "foreach"))
@@ -123,6 +140,7 @@ parseLexemeVW = fmap go . parseLexemeW
     go (Right x) = case isVar x of
         Just v  -> Left v
         Nothing -> Right (Right x)
+
 
 
 main :: IO ()
