@@ -94,6 +94,9 @@ type LexemeW = Either Whitespace Lexeme
 -- Right (Close ")")
 -- Right (Symbol ";")
 -- Right (Close "}")
+-- 
+-- >>> mapM_ print $ parseLexemeW "// important comment"
+-- Left (Comment " important comment")
 parseLexemeW :: String -> [LexemeW]
 parseLexemeW [] = []
 parseLexemeW (c:cs) | isAlphaNum c = case parseLexemeW cs of
@@ -105,7 +108,7 @@ parseLexemeW (c:cs) | isSpace c = case parseLexemeW cs of
     ls                  -> Left (Blank [c]  ) : ls
 parseLexemeW ('/':'/':cs) = Left (Comment comment) : parseLexemeW cs'
   where
-    (comment, cs') = break (/= '\n') cs
+    (comment, cs') = break (== '\n') cs
 parseLexemeW ('{':cs) = Right (Open  "{") : parseLexemeW cs
 parseLexemeW ('[':cs) = Right (Open  "[") : parseLexemeW cs
 parseLexemeW ('(':cs) = Right (Open  "(") : parseLexemeW cs
@@ -269,12 +272,28 @@ pMaybeToken p = do
     put xs
     return y
 
+pExactToken :: LexemeW -> Parser ()
+pExactToken x = pMaybeToken go
+  where
+    go :: LexemeW -> Maybe ()
+    go x' | x == x' = Just ()
+    go _ = Nothing
+
 pWhitespace :: Parser Whitespace
 pWhitespace = pMaybeToken go
   where
     go :: LexemeW -> Maybe Whitespace
     go (Left w) = Just w
     go _ = Nothing
+
+-- | greedily eat as much whitespace as possible
+-- >>> testParser pWhitespaces "// important comment"
+-- Just "// important comment"
+-- >>> testParser pWhitespaces " \n / "
+-- Just " \n "
+pWhitespaces :: Parser [Whitespace]
+pWhitespaces = ((:) <$> pWhitespace <*> pWhitespaces)
+           <|> return []
 
 pLexeme :: Parser Lexeme
 pLexeme = pMaybeToken go
@@ -339,6 +358,14 @@ pWildcard = ((++) <$> pNesting                <*> pWildcard0)
         <|> ((:)  <$> (Right <$> pFlatLexeme) <*> pWildcard0)
         <|> ((:)  <$> (Left  <$> pWhitespace) <*> pWildcard )
 
+-- | like pWildcard, plus extra whitespace.
+-- >>> testParser pWildcardW "foo.bar(baz)"
+-- Just "foo"
+-- >>> testParser pWildcardW "  foo // important comment\n    .bar(baz)"
+-- Just "  foo // important comment\n    "
+pWildcardW :: Parser [LexemeW]
+pWildcardW = (++) <$> pWildcard <*> (fmap Left <$> pWhitespaces)
+
 pNesting :: Parser [LexemeW]
 pNesting = do
     sOpen <- pOpen
@@ -349,6 +376,17 @@ pNesting = do
                ++ xs
                ++ [Right (Close sClose)]
     else error $ printf "mismatched parens: '%s' and '%s'" sOpen sClose
+
+
+pMatchVar :: Var -> Parser Subst1
+pMatchVar v = (,) <$> pure v <*> pWildcardW
+
+pMatchPattern :: [LexemeV] -> Parser Subst
+pMatchPattern []           = return []
+pMatchPattern (Right x:xs) = pWhitespaces
+                          >> pExactToken (Right x)
+                          >> pMatchPattern xs
+pMatchPattern (Left  v:xs) = (:) <$> pMatchVar v <*> pMatchPattern xs
 
 
 main :: IO ()
