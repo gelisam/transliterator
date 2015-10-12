@@ -1,6 +1,8 @@
 module Main where
 
+import Control.Applicative
 import Control.Arrow
+import Control.Monad.Trans.State
 import Data.Char
 import Data.Either
 import Test.DocTest
@@ -111,6 +113,12 @@ parseLexemeW ('}':cs) = Right (Close "}") : parseLexemeW cs
 parseLexemeW (c:cs) = case parseLexemeW cs of
     Right (Symbol s) : ls -> Right (Symbol (c:s)) : ls
     ls                    -> Right (Symbol [c]  ) : ls
+
+matchingParen :: String -> String
+matchingParen "{" = "}"
+matchingParen "[" = "]"
+matchingParen "(" = ")"
+matchingParen s   = error $ printf "unrecognized paren '%s'" s
 
 
 newtype Var = Var String
@@ -231,8 +239,115 @@ substitute replacements = fmap assertR
     substituteAll = compose . fmap substitute1
     
     assertR :: LexemeVW -> LexemeW
-    assertR (Left (Var var)) = error $ printf "%s not in scope" var
+    assertR (Left (Var var)) = error $ printf "'%s' not in scope" var
     assertR (Right x) = x
+
+
+type Parser a = StateT [LexemeW] [] a
+
+runParser :: Parser a -> [LexemeW] -> Maybe (a, [LexemeW])
+runParser parser input = case runStateT parser input of
+    []    -> Nothing
+    (x:_) -> Just x
+
+evalParser :: Parser a -> [LexemeW] -> Maybe a
+evalParser parser = fmap fst . runParser parser
+
+-- |
+-- >>> evalParser (pMaybeToken Just) $ parseLexemeW "..."
+-- Just (Right (Symbol "..."))
+-- >>> evalParser (pMaybeToken (const Nothing)) $ parseLexemeW "..."
+-- Nothing
+-- >>> evalParser (pMaybeToken Just) $ parseLexemeW ""
+-- Nothing
+pMaybeToken :: (LexemeW -> Maybe a) -> Parser a
+pMaybeToken p = do
+    (x:xs) <- get
+    Just y <- return (p x)
+    put xs
+    return y
+
+pWhitespace :: Parser Whitespace
+pWhitespace = pMaybeToken go
+  where
+    go :: LexemeW -> Maybe Whitespace
+    go (Left w) = Just w
+    go _ = Nothing
+
+pLexeme :: Parser Lexeme
+pLexeme = pMaybeToken go
+  where
+    go :: LexemeW -> Maybe Lexeme
+    go (Right x) = Just x
+    go _ = Nothing
+
+pLexemeW :: Parser LexemeW
+pLexemeW = pMaybeToken Just
+
+pOpen :: Parser String
+pOpen = pMaybeToken go
+  where
+    go :: LexemeW -> Maybe String
+    go (Right (Open s)) = Just s
+    go _ = Nothing
+
+pClose :: Parser String
+pClose = pMaybeToken go
+  where
+    go :: LexemeW -> Maybe String
+    go (Right (Close s)) = Just s
+    go _ = Nothing
+
+-- not an Open nor a Close
+pFlatLexemeW :: Parser LexemeW
+pFlatLexemeW = pMaybeToken go
+  where
+    go :: LexemeW -> Maybe LexemeW
+    go (Right (Open  _)) = Nothing
+    go (Right (Close _)) = Nothing
+    go x = Just x
+
+-- not an Open nor a Close
+pFlatLexeme :: Parser Lexeme
+pFlatLexeme = pMaybeToken go
+  where
+    go :: LexemeW -> Maybe Lexeme
+    go (Right (Open  _)) = Nothing
+    go (Right (Close _)) = Nothing
+    go (Right x) = Just x
+    go _ = Nothing
+
+-- match as little as possible, possibly nothing.
+pWildcard0 :: Parser [LexemeW]
+pWildcard0 = return []
+         <|> ((++) <$> pNesting     <*> pWildcard0)
+         <|> ((:)  <$> pFlatLexemeW <*> pWildcard0)
+
+-- | match as little as possible, but at least one lexeme.
+-- >>> let test = fmap unparse . evalParser pWildcard . parseLexemeW
+-- >>> test "foo.bar(baz)"
+-- Just "foo"
+-- >>> test " foo.bar(baz)"
+-- Just " foo"
+-- >>> test "(foo ~ bar).apply(baz)"
+-- Just "(foo ~ bar)"
+-- >>> test "(foo ~ bar].apply(baz)"
+-- *** Exception: mismatched parens: '(' and ']'
+pWildcard :: Parser [LexemeW]
+pWildcard = ((++) <$> pNesting                <*> pWildcard0)
+        <|> ((:)  <$> (Right <$> pFlatLexeme) <*> pWildcard0)
+        <|> ((:)  <$> (Left  <$> pWhitespace) <*> pWildcard )
+
+pNesting :: Parser [LexemeW]
+pNesting = do
+    sOpen <- pOpen
+    xs <- pWildcard0
+    sClose <- pClose
+    if matchingParen sOpen == sClose
+    then return $ [Right (Open sOpen)]
+               ++ xs
+               ++ [Right (Close sClose)]
+    else error $ printf "mismatched parens: '%s' and '%s'" sOpen sClose
 
 
 main :: IO ()
