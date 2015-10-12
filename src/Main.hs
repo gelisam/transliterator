@@ -7,12 +7,16 @@ import Test.DocTest
 -- $setup
 -- >>> let jsForeachSource = "for (let i of [1,2,3]) {console.log(i);}"
 -- >>> let jsForeachPattern = "for (let VAR of LIST) {...}"
+-- >>> let cppForeachPattern = "for (TYPE::iterator VAR = LIST.begin(); VAR != LIST.end(); ++VAR) {...}"
 -- >>> let scalaForeachPattern = "LIST.foreach { VAR => ... }"
 -- 
 -- >>> let jsForeachSourceW = parseLexemeW jsForeachSource
 -- 
 -- >>> let jsForeachPatternV = parseLexemeV jsForeachPattern
 -- >>> let jsForeachPatternVM = parseLexemeVW jsForeachPattern
+-- 
+-- >>> let cppForeachPatternV = parseLexemeV cppForeachPattern
+-- >>> let cppForeachPatternVM = parseLexemeVW cppForeachPattern
 -- 
 -- >>> let scalaForeachPatternV = parseLexemeV scalaForeachPattern
 -- >>> let scalaForeachPatternVM = parseLexemeVW scalaForeachPattern
@@ -173,8 +177,8 @@ type Subst1 = (Var,[LexemeW])
 type Subst = [Subst1]
 
 -- | only substitute the first occurrence of one variable.
--- >>> unparse $ substitute11 (Var "VAR", parseLexemeW "i") jsForeachPatternVM
--- "for (let i of LIST) {...}"
+-- >>> unparse $ substitute11 (Var "VAR", parseLexemeW "i") cppForeachPatternVM
+-- "for (TYPE::iterator i = LIST.begin(); VAR != LIST.end(); ++VAR) {...}"
 substitute11 :: Subst1 -> [LexemeVW] -> [LexemeVW]
 substitute11 (var,replacement) = go
   where
@@ -183,9 +187,9 @@ substitute11 (var,replacement) = go
     go (Left v:xs) | v == var = fmap Right replacement ++ xs
     go (x     :xs)            = x : go xs 
 
--- substitute all occurrences of one variable.
--- >>> unparse $ substitute1 (Var "VAR", parseLexemeW "i") jsForeachPatternVM
--- "for (let i of LIST) {...}"
+-- | substitute all occurrences of one variable.
+-- >>> unparse $ substitute1 (Var "VAR", parseLexemeW "i") cppForeachPatternVM
+-- "for (TYPE::iterator i = LIST.begin(); i != LIST.end(); ++i) {...}"
 substitute1 :: Subst1 -> [LexemeVW] -> [LexemeVW]
 substitute1 (var,replacement) = go
   where
