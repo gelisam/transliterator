@@ -5,7 +5,7 @@ import Data.Either
 import Test.DocTest
 
 -- $setup
--- >>> let jsForeachSource = "for (let i of [1,2,3]) {...}"
+-- >>> let jsForeachSource = "for (let i of [1,2,3]) {console.log(i);}"
 -- >>> let jsForeachPattern = "for (let VAR of LIST) {...}"
 -- >>> let scalaForeachPattern = "LIST.foreach { VAR => ... }"
 -- 
@@ -59,7 +59,13 @@ type LexemeW = Either Whitespace Lexeme
 -- Right (Close ")")
 -- Left (Blank " ")
 -- Right (Open "{")
--- Right (Symbol "...")
+-- Right (Alphanum "console")
+-- Right (Symbol ".")
+-- Right (Alphanum "log")
+-- Right (Open "(")
+-- Right (Alphanum "i")
+-- Right (Close ")")
+-- Right (Symbol ";")
 -- Right (Close "}")
 parseLexemeW :: String -> [LexemeW]
 parseLexemeW [] = []
