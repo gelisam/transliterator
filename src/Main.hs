@@ -9,6 +9,8 @@ import Test.DocTest
 import Text.Printf
 
 -- $setup
+-- >>> let testParser p = fmap unparse . evalParser p . parseLexemeW
+-- 
 -- >>> let jsForeachSource = "for (let i of [1,2,3]) {console.log(i);}"
 -- >>> let jsForeachPattern = "for (let VAR of LIST) {...}"
 -- >>> let cppForeachPattern = "for (... VAR = LIST.begin(); VAR != LIST.end(); ++VAR) {...}"
@@ -324,14 +326,13 @@ pWildcard0 = return []
          <|> ((:)  <$> pFlatLexemeW <*> pWildcard0)
 
 -- | match as little as possible, but at least one lexeme.
--- >>> let test = fmap unparse . evalParser pWildcard . parseLexemeW
--- >>> test "foo.bar(baz)"
+-- >>> testParser pWildcard "foo.bar(baz)"
 -- Just "foo"
--- >>> test " foo.bar(baz)"
+-- >>> testParser pWildcard " foo.bar(baz)"
 -- Just " foo"
--- >>> test "(foo ~ bar).apply(baz)"
+-- >>> testParser pWildcard "(foo ~ bar).apply(baz)"
 -- Just "(foo ~ bar)"
--- >>> test "(foo ~ bar].apply(baz)"
+-- >>> testParser pWildcard "(foo ~ bar].apply(baz)"
 -- *** Exception: mismatched parens: '(' and ']'
 pWildcard :: Parser [LexemeW]
 pWildcard = ((++) <$> pNesting                <*> pWildcard0)
