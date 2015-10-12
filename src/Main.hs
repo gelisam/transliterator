@@ -225,10 +225,10 @@ substitute1 (var,replacement) = go
 -- unparse $ substitute [ (Var "...", parseLexemeW "map<int,string>::key_iterator")
 --                      , (Var "VAR", parseLexemeW "i")
 --                      , (Var "LIST", parseLexemeW "myMap.keys")
---                      , (Var "...", parseLexemeW "cout << i << endl;")
+--                      , (Var "...", parseLexemeW "cout << *i << endl;")
 --                      ] cppForeachPatternVM
 -- :}
--- "for (map<int,string>::key_iterator i = myMap.keys.begin(); i != myMap.keys.end(); ++i) {cout << i << endl;}"
+-- "for (map<int,string>::key_iterator i = myMap.keys.begin(); i != myMap.keys.end(); ++i) {cout << *i << endl;}"
 substitute :: Subst -> [LexemeVW] -> [LexemeW]
 substitute replacements = fmap assertR
                         . substituteAll replacements
