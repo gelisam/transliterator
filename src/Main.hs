@@ -10,14 +10,10 @@ import Test.DocTest
 -- >>> let scalaForeachPattern = "LIST.foreach { VAR => ... }"
 -- 
 -- >>> let jsForeachSourceW = parseLexemeW jsForeachSource
--- >>> let jsForeachSourceV = parseLexemeV jsForeachSource
--- >>> let jsForeachSourceVM = parseLexemeVW jsForeachSource
 -- 
--- >>> let jsForeachPatternW = parseLexemeW jsForeachPattern
 -- >>> let jsForeachPatternV = parseLexemeV jsForeachPattern
 -- >>> let jsForeachPatternVM = parseLexemeVW jsForeachPattern
 -- 
--- >>> let scalaForeachPatternW = parseLexemeW scalaForeachPattern
 -- >>> let scalaForeachPatternV = parseLexemeV scalaForeachPattern
 -- >>> let scalaForeachPatternVM = parseLexemeVW scalaForeachPattern
 
