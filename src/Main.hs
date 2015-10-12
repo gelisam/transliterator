@@ -107,11 +107,15 @@ parseLexemeW (c:cs) = case parseLexemeW cs of
     ls                    -> Right (Symbol [c]  ) : ls
 
 
-type Var = String
+newtype Var = Var String
+  deriving (Show, Eq)
+
+instance Unparse Var where
+    unparse (Var s) = s
 
 isVar :: Lexeme -> Maybe Var
-isVar (Symbol "...") = Just "..."
-isVar (Alphanum s) | all isUpper s = Just s
+isVar (Symbol "...") = Just (Var "...")
+isVar (Alphanum s) | all isUpper s = Just (Var s)
 isVar _ = Nothing
 
 
@@ -122,12 +126,12 @@ type LexemeV = Either Var Lexeme
 -- Right (Alphanum "for")
 -- Right (Open "(")
 -- Right (Alphanum "let")
--- Left "VAR"
+-- Left (Var "VAR")
 -- Right (Alphanum "of")
--- Left "LIST"
+-- Left (Var "LIST")
 -- Right (Close ")")
 -- Right (Open "{")
--- Left "..."
+-- Left (Var "...")
 -- Right (Close "}")
 parseLexemeV :: String -> [LexemeV]
 parseLexemeV = fmap go . rights . parseLexemeW
@@ -142,17 +146,17 @@ type LexemeVW = Either Var LexemeW
 
 -- |
 -- >>> mapM_ print scalaForeachPatternVM
--- Left "LIST"
+-- Left (Var "LIST")
 -- Right (Right (Symbol "."))
 -- Right (Right (Alphanum "foreach"))
 -- Right (Left (Blank " "))
 -- Right (Right (Open "{"))
 -- Right (Left (Blank " "))
--- Left "VAR"
+-- Left (Var "VAR")
 -- Right (Left (Blank " "))
 -- Right (Right (Symbol "=>"))
 -- Right (Left (Blank " "))
--- Left "..."
+-- Left (Var "...")
 -- Right (Left (Blank " "))
 -- Right (Right (Close "}"))
 parseLexemeVW :: String -> [LexemeVW]
