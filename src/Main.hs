@@ -169,6 +169,31 @@ parseLexemeVW = fmap go . parseLexemeW
         Nothing -> Right (Right x)
 
 
+type Subst1 = (Var,[LexemeW])
+type Subst = [Subst1]
+
+-- | only substitute the first occurrence of one variable.
+-- >>> unparse $ substitute11 (Var "VAR", parseLexemeW "i") jsForeachPatternVM
+-- "for (let i of LIST) {...}"
+substitute11 :: Subst1 -> [LexemeVW] -> [LexemeVW]
+substitute11 (var,replacement) = go
+  where
+    go :: [LexemeVW] -> [LexemeVW]
+    go []                     = []
+    go (Left v:xs) | v == var = fmap Right replacement ++ xs
+    go (x     :xs)            = x : go xs 
+
+-- substitute all occurrences of one variable.
+-- >>> unparse $ substitute1 (Var "VAR", parseLexemeW "i") jsForeachPatternVM
+-- "for (let i of LIST) {...}"
+substitute1 :: Subst1 -> [LexemeVW] -> [LexemeVW]
+substitute1 (var,replacement) = go
+  where
+    go :: [LexemeVW] -> [LexemeVW]
+    go []                     = []
+    go (Left v:xs) | v == var = fmap Right replacement ++ go xs
+    go (x     :xs)            = x : go xs 
+
 
 main :: IO ()
 main = doctest ["src/Main.hs"]
