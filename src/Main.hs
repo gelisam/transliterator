@@ -389,5 +389,44 @@ pMatchPattern (Right x:xs) = pWhitespaces
 pMatchPattern (Left  v:xs) = (:) <$> pMatchVar v <*> pMatchPattern xs
 
 
+-- |
+-- >>> :{
+-- let test fromPattern toPattern input = unparse
+--                                      $ transliterate (parseLexemeV fromPattern)
+--                                                      (parseLexemeVW toPattern)
+--                                                      (parseLexemeW input)
+-- :}
+-- 
+-- >>> test jsForeachPattern scalaForeachPattern jsForeachSource
+-- " [1,2,3].foreach {  i  => console.log(i); }"
+-- 
+-- >>> :{
+-- test "for (CTOR<TYPE>::iterator VAR = LIST.begin(); VAR != LIST.end(); ++VAR) {...}"
+--      "LIST.foreach { VAR: TYPE => ... }"
+--      "for (vector<int>::iterator i = myVector.begin(); i != myVector.end(); ++i) {cout << *i << endl;}"
+-- :}
+-- " myVector.foreach {  i : int => cout << *i << endl; }"
+-- 
+-- >>> :{
+-- test "cout << *EXPR << endl;"
+--      "println(EXPR)"
+--      " myVector.foreach {  i : int => cout << *i << endl; }"
+-- :}
+-- " myVector.foreach {  i : int =>println(i ) }"
+transliterate :: [LexemeV] -> [LexemeVW]
+              -> [LexemeW] -> [LexemeW]
+transliterate patternFrom patternTo = go
+  where
+    parser :: Parser Subst
+    parser = pMatchPattern patternFrom
+    
+    go :: [LexemeW] -> [LexemeW]
+    go [] = []
+    go (x:xs) = case runParser parser (x:xs) of
+        Just (subst, xs') -> substitute subst patternTo
+                          ++ go xs'
+        Nothing -> x : go xs
+
+
 main :: IO ()
 main = doctest ["src/Main.hs"]
