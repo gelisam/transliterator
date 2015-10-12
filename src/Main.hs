@@ -1,8 +1,10 @@
 module Main where
 
+import Control.Arrow
 import Data.Char
 import Data.Either
 import Test.DocTest
+import Text.Printf
 
 -- $setup
 -- >>> let jsForeachSource = "for (let i of [1,2,3]) {console.log(i);}"
@@ -197,6 +199,40 @@ substitute1 (var,replacement) = go
     go []                     = []
     go (Left v:xs) | v == var = fmap Right replacement ++ go xs
     go (x     :xs)            = x : go xs 
+
+-- | Substitute all occurrences of all variables.
+-- 
+-- The same variable (usually "...") can appear more than once in the
+-- replacements, in which case each occurrence of that variable in the input
+-- will be replaced with the corresponding replacement.
+-- A variable can also appear once in the replacements, in which case all the
+-- occurrences of that variable in the input will become that replacement.
+-- 
+-- >>> :{
+-- unparse $ substitute [ (Var "...", parseLexemeW "map<int,string>::key_iterator")
+--                      , (Var "VAR", parseLexemeW "i")
+--                      , (Var "LIST", parseLexemeW "myMap.keys")
+--                      , (Var "...", parseLexemeW "cout << i << endl;")
+--                      ] cppForeachPatternVM
+-- :}
+-- "for (map<int,string>::key_iterator i = myMap.keys.begin(); i != myMap.keys.end(); ++i) {cout << i << endl;}"
+substitute :: Subst -> [LexemeVW] -> [LexemeW]
+substitute replacements = fmap assertR
+                        . substituteAll replacements
+                        . substituteOnce replacements
+  where
+    compose :: [a -> a] -> (a -> a)
+    compose = foldr (>>>) id
+    
+    substituteOnce :: Subst -> [LexemeVW] -> [LexemeVW]
+    substituteOnce = compose . fmap substitute11
+    
+    substituteAll :: Subst -> [LexemeVW] -> [LexemeVW]
+    substituteAll = compose . fmap substitute1
+    
+    assertR :: LexemeVW -> LexemeW
+    assertR (Left (Var var)) = error $ printf "%s not in scope" var
+    assertR (Right x) = x
 
 
 main :: IO ()
