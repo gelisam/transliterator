@@ -379,7 +379,18 @@ pNesting = do
 
 
 pMatchVar :: Var -> Parser Subst1
-pMatchVar v = (,) <$> pure v <*> pWildcardW
+pMatchVar v = (,) <$> pure v <*> (clean <$> pWildcardW)
+  where
+    -- remove blanks at the beginning and end
+    clean :: [LexemeW] -> [LexemeW]
+    clean = reverse
+          . dropWhile isBlank
+          . reverse
+          . dropWhile isBlank
+    
+    isBlank :: LexemeW -> Bool
+    isBlank (Left (Blank _)) = True
+    isBlank _ = False
 
 pMatchPattern :: [LexemeV] -> Parser Subst
 pMatchPattern []           = return []
@@ -398,21 +409,21 @@ pMatchPattern (Left  v:xs) = (:) <$> pMatchVar v <*> pMatchPattern xs
 -- :}
 -- 
 -- >>> test jsForeachPattern scalaForeachPattern jsForeachSource
--- " [1,2,3].foreach {  i  => console.log(i); }"
+-- "[1,2,3].foreach { i => console.log(i); }"
 -- 
 -- >>> :{
 -- test "for (CTOR<TYPE>::iterator VAR = LIST.begin(); VAR != LIST.end(); ++VAR) {...}"
 --      "LIST.foreach { VAR: TYPE => ... }"
 --      "for (vector<int>::iterator i = myVector.begin(); i != myVector.end(); ++i) {cout << *i << endl;}"
 -- :}
--- " myVector.foreach {  i : int => cout << *i << endl; }"
+-- "myVector.foreach { i: int => cout << *i << endl; }"
 -- 
 -- >>> :{
 -- test "cout << *EXPR << endl;"
 --      "println(EXPR)"
---      " myVector.foreach {  i : int => cout << *i << endl; }"
+--      "myVector.foreach { i: int => cout << *i << endl; }"
 -- :}
--- " myVector.foreach {  i : int =>println(i ) }"
+-- "myVector.foreach { i: int =>println(i) }"
 transliterate :: [LexemeV] -> [LexemeVW]
               -> [LexemeW] -> [LexemeW]
 transliterate patternFrom patternTo = go
